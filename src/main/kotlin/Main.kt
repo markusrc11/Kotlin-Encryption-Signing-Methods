@@ -15,12 +15,8 @@ import java.io.FileInputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.security.KeyStore
-import java.security.MessageDigest
-import java.security.PrivateKey
-import java.security.PublicKey
+import java.security.*
 import java.security.cert.Certificate
-import java.util.*
 import javax.crypto.Cipher
 
 
@@ -33,6 +29,50 @@ fun main() {
 
     // More info: https://github.com/pgpainless/pgpainless
     GPGMethod()
+
+    manualEncrypton()
+
+    digitalSignature()
+}
+
+fun digitalSignature() {
+    val signature = initSignature()
+    val signUpdated = signMsg(msg.toByteArray(), signature)
+    Files.write(Paths.get("digital_signature_2"), signUpdated)
+    println("isCorrect: ${verifySignature(signUpdated!!, msg.toByteArray())}")
+
+}
+
+private fun verifySignature(encryptedMsgBytes: ByteArray, msg: ByteArray): Boolean {
+    val signature = Signature.getInstance("SHA256withRSA")
+    signature.initVerify(getPublicKey())
+
+    signature.update(encryptedMsgBytes)
+    return signature.verify(msg)
+}
+
+fun signMsg(msgToEncrypt: ByteArray, signature: Signature): ByteArray? {
+    val messageBytes = msgToEncrypt
+
+    signature.update(messageBytes)
+    return signature.sign()
+}
+
+private fun initSignature(): Signature {
+    val signature: Signature = Signature.getInstance("SHA256withRSA")
+    signature.initSign(getPrivateKey())
+    return signature
+}
+
+fun manualEncrypton() {
+    val pub = getPublicKey()
+    val priv = getPrivateKey()
+    val hashMsg = generateMsgHash(msg.toByteArray())
+    val encryptedMsg = encrypt(hashMsg!!)
+    saveSignature(encryptedMsg)
+    val decryptedMsg = decrypt(encryptedMsg)
+    println("isCorrect: ${isCorrect(decryptedMsg!!, generateMsgHash(msg.toByteArray())!!)}")
+
 }
 
 fun GPGMethod() {
@@ -123,18 +163,13 @@ private fun decrypt(encryptedMessageHash: ByteArray?): ByteArray? {
     return decryptedMessageHash
 }
 
-private fun verifySignature(): ByteArray {
-    val encryptedMessageHash = Files.readAllBytes(Paths.get("digital_signature_1"))
-    return encryptedMessageHash
+private fun saveSignature(encryptedMsg: ByteArray) {
+    Files.write(Paths.get("digital_signature_1"), encryptedMsg);
 }
-
-private fun saveSignature() {
-    Files.write(Paths.get("digital_signature_1"), encrypt());
-}
-private fun encrypt(): ByteArray {
+private fun encrypt(hashMsg: ByteArray): ByteArray {
     val cipher: Cipher = Cipher.getInstance("RSA")
     cipher.init(Cipher.ENCRYPT_MODE, getPrivateKey())
-    val digitalSignature: ByteArray = cipher.doFinal(generateMsgHash(msg.toByteArray()))
+    val digitalSignature: ByteArray = cipher.doFinal(hashMsg)
     return digitalSignature
 }
 private fun generateMsgHash(messageBytes: ByteArray): ByteArray? {
