@@ -30,6 +30,7 @@ fun main() {
     // More info: https://github.com/pgpainless/pgpainless
     GPGMethod()
 
+    // More info: https://www.baeldung.com/java-digital-signature
     manualEncrypton()
 
     digitalSignature()
