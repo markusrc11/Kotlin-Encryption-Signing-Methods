@@ -14,6 +14,8 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation ("org.pgpainless:pgpainless-core:1.3.4")
+
 }
 
 tasks.test {
