@@ -13,6 +13,20 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.cert.Certificate
+import java.util.*
+import javax.crypto.Cipher
+
+
+const val password = "123456"
+const val filePath = "Path to file"
+const val msg = "Hey, how are you?"
 
 fun main() {
     println("Hello World!")
@@ -97,4 +111,45 @@ private fun GPGEncryptAndSign(
     // Encrypted message
     val encryptedMessage = ciphertext.toString()
     return encryptedMessage
+}
+
+private fun isCorrect(decryptedMessageHash: ByteArray, newMessageHash: ByteArray): Boolean {
+    return decryptedMessageHash.contentEquals(newMessageHash)
+}
+private fun decrypt(encryptedMessageHash: ByteArray?): ByteArray? {
+    val cipher = Cipher.getInstance("RSA")
+    cipher.init(Cipher.DECRYPT_MODE, getPublicKey())
+    val decryptedMessageHash = cipher.doFinal(encryptedMessageHash)
+    return decryptedMessageHash
+}
+
+private fun verifySignature(): ByteArray {
+    val encryptedMessageHash = Files.readAllBytes(Paths.get("digital_signature_1"))
+    return encryptedMessageHash
+}
+
+private fun saveSignature() {
+    Files.write(Paths.get("digital_signature_1"), encrypt());
+}
+private fun encrypt(): ByteArray {
+    val cipher: Cipher = Cipher.getInstance("RSA")
+    cipher.init(Cipher.ENCRYPT_MODE, getPrivateKey())
+    val digitalSignature: ByteArray = cipher.doFinal(generateMsgHash(msg.toByteArray()))
+    return digitalSignature
+}
+private fun generateMsgHash(messageBytes: ByteArray): ByteArray? {
+    val md = MessageDigest.getInstance("SHA-256")
+    val messageHash = md.digest(messageBytes)
+    return messageHash
+}
+private fun getPublicKey(): PublicKey? {
+    val keyStore = KeyStore.getInstance("PKCS12")
+    keyStore.load(FileInputStream("receiver_keytore.p12"), password.toCharArray())
+    val certificate: Certificate = keyStore.getCertificate("receiverKeyPair")
+    return certificate.publicKey
+}
+private fun getPrivateKey(): PrivateKey {
+    val keyStore = KeyStore.getInstance("PKCS12")
+    keyStore.load(FileInputStream("sender_keystore.p12"), password.toCharArray())
+    return keyStore.getKey("senderKeyPair", password.toCharArray()) as PrivateKey
 }
