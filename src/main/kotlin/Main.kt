@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets
 fun main() {
     println("Hello World!")
 
+    // More info: https://github.com/pgpainless/pgpainless
     GPGMethod()
 }
 
